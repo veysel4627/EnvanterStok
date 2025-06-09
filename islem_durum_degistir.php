@@ -1,68 +1,54 @@
 <?php
 include('db.php');
 
-// POST verilerini al
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'], $_POST['durum'])) {
     $islem_id = intval($_POST['id']);
-    $durum = intval($_POST['durum']); // Yeni durum (1: Tamamlandı, 0: Tamamlanmadı)
+    $yeni_durum = intval($_POST['durum']);
 
-    // İşlem bilgilerini al
-    $query = "SELECT islem.durum, islem.giren_id, islem.islem_turu, islem.miktar, giren.stok 
-              FROM islem 
-              JOIN giren ON islem.giren_id = giren.id 
-              WHERE islem.id = $islem_id";
-    $result = mysqli_query($conn, $query);
+    // İşlem bilgilerini çek
+    $islem_sorgu = $conn->query("SELECT * FROM islem WHERE id = $islem_id");
+    if ($islem_sorgu && $islem_sorgu->num_rows > 0) {
+        $islem = $islem_sorgu->fetch_assoc();
 
-    if ($result && mysqli_num_rows($result) > 0) {
-        $row = mysqli_fetch_assoc($result);
-        $mevcut_durum = $row['durum'];
-        $giren_id = $row['giren_id'];
-        $islem_turu = $row['islem_turu']; // 0: Satın Alma, 1: Satılma
-        $miktar = $row['miktar'];
-        $stok = $row['stok'];
+        // Sadece tamamlanmaya çekiliyorsa stok işlemi yap (ve sadece ilk kez tamamlanıyorsa)
+        if ($islem['durum'] == 0 && $yeni_durum == 1) {
+            $giren_id = intval($islem['giren_id']);
+            $miktar = floatval($islem['miktar']);
 
-        // Eğer işlem zaten tamamlandıysa güncellemeye izin verme
-        if ($mevcut_durum == 1) {
-            header("Location: islemler.php?error=islem_tamamlandi");
-            exit;
-        }
-
-        // Eğer işlem tamamlandı olarak güncelleniyorsa stok güncellemesi yap
-        if ($durum == 1) {
-            if ($islem_turu == 0) {
-                // Satın alma işlemi: Stok miktarını artır
-                $yeni_stok = $stok + $miktar;
-            } elseif ($islem_turu == 1) {
-                // Satılma işlemi: Stok miktarını azalt
-                $yeni_stok = $stok - $miktar;
-
-                // Stok miktarı negatif olamaz
-                if ($yeni_stok < 0) {
-                    header("Location: islemler.php?error=stok_negatif");
-                    exit;
+            // Satılma ise stoktan düş
+            if ($islem['islem_turu'] == 1) {
+                $stok_sorgu = $conn->query("SELECT stok FROM giren WHERE id = $giren_id");
+                if ($stok_sorgu && $stok_sorgu->num_rows > 0) {
+                    $stok_row = $stok_sorgu->fetch_assoc();
+                    $yeni_stok = $stok_row['stok'] - $miktar;
+                    if ($yeni_stok < 0) {
+                        header("Location: islemler.php?error=stok_negatif");
+                        exit;
+                    }
+                    $conn->query("UPDATE giren SET stok = $yeni_stok WHERE id = $giren_id");
                 }
             }
-
-            // Stok miktarını güncelle
-            $update_stok_query = "UPDATE giren SET stok = $yeni_stok WHERE id = $giren_id";
-            if (!mysqli_query($conn, $update_stok_query)) {
-                header("Location: islemler.php?error=stok_guncellenemedi");
-                exit;
+            // Satın alma ise stoğa ekle
+            else if ($islem['islem_turu'] == 0) {
+                $conn->query("UPDATE giren SET stok = stok + $miktar WHERE id = $giren_id");
             }
+            // Taşıma ise stoğa dokunma
         }
 
-        // İşlemin durumunu güncelle
-        $update_durum_query = "UPDATE islem SET durum = $durum WHERE id = $islem_id";
-        if (mysqli_query($conn, $update_durum_query)) {
+        // Durumu güncelle (her durumda)
+        if ($conn->query("UPDATE islem SET durum = $yeni_durum WHERE id = $islem_id")) {
             header("Location: islemler.php?success=1");
             exit;
         } else {
-            header("Location: islemler.php?error=durum_guncellenemedi");
+            header("Location: islemler.php?error=durum_guncelenemedi");
             exit;
         }
     } else {
         header("Location: islemler.php?error=islem_bulunamadi");
         exit;
     }
+} else {
+    header("Location: islemler.php?error=bilinmeyen");
+    exit;
 }
 ?>

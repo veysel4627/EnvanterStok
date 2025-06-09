@@ -4,42 +4,75 @@
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 class="h2">Yeni Ürün Ekle</h1>
     </div>
-    <form action="yeni_urun_ekle_islem.php" method="POST">
-        <div class="form-group">
+    <form action="yeni_urun_ekle_islem.php" method="POST" class="card shadow-sm p-4" style="max-width:600px;margin:auto;">
+        <div class="form-group mb-3">
             <label for="ad">Ürün Adı</label>
-            <input type="text" class="form-control" id="ad" name="ad" required>
+            <input type="text" class="form-control" id="ad" name="ad" placeholder="Ürün adını yazınız..." value="" required>
         </div>
-        <div class="form-group">
+        <div class="form-group mb-3">
             <label for="aciklama">Açıklama</label>
-            <textarea class="form-control" id="aciklama" name="aciklama" rows="3" required></textarea>
+            <textarea class="form-control" id="aciklama" name="aciklama" rows="3" placeholder="Ürünün açıklamasını giriniz..." required></textarea>
         </div>
-        <div class="form-group">
-            <label for="adet">Adet</label>
-            <input type="number" class="form-control" id="adet" name="adet" required>
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label for="adet">Adet</label>
+                <input type="number" class="form-control" id="adet" name="adet" value="0" min="0" required>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="stok">Stok</label>
+                <input type="number" class="form-control" id="stok" name="stok" value="0" min="0" required>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="birim">Birim</label>
+                <select class="form-control" id="birim" name="birim" required>
+                    <option value="0">m²</option>
+                    <option value="1">Kilo</option>
+                    <option value="2">Koli</option>
+                    <option value="3">m³</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label for="fiyat">Fiyat</label>
+                <input type="number" class="form-control" id="fiyat" name="fiyat" value="0" min="0" step="0.01" required>
+            </div>
         </div>
-        <div class="form-group">
-            <label for="fiyat">Fiyat</label>
-            <input type="text" class="form-control" id="fiyat" name="fiyat" required>
-        </div>
-        <div class="form-group">
+        <div class="form-group mb-3">
             <label for="cikan_id">Çıkan Ürün</label>
             <select class="form-control" id="cikan_id" name="cikan_id" required>
                 <option value="">Seçiniz...</option>
                 <?php
                 include('db.php');
-                // Çıkan ürünlerin listesini almak için SQL sorgusu
                 $sql = "SELECT id, ad FROM cikan";
                 $result = $conn->query($sql);
-                if ($result->num_rows > 0) {
+                if ($result && $result->num_rows > 0) {
                     while($row = $result->fetch_assoc()) {
-                        echo "<option value='" . $row["id"] . "'>" . $row["ad"] . "</option>";
+                        echo "<option value='" . $row["id"] . "'>" . htmlspecialchars($row["ad"]) . "</option>";
                     }
                 }
                 $conn->close();
                 ?>
             </select>
         </div>
-        <button type="submit" class="btn btn-primary">Ekle</button>
+        <div class="form-group mb-4">
+            <label for="tedarikci_id">Tedarikçi</label>
+            <select class="form-control" id="tedarikci_id" name="tedarikci_id" required>
+                <option value="">Seçiniz...</option>
+                <?php
+                include('db.php');
+                $sql = "SELECT id, ad FROM tedarikci";
+                $result = $conn->query($sql);
+                if ($result && $result->num_rows > 0) {
+                    while($row = $result->fetch_assoc()) {
+                        echo "<option value='" . $row["id"] . "'>" . htmlspecialchars($row["ad"]) . "</option>";
+                    }
+                }
+                $conn->close();
+                ?>
+            </select>
+        </div>
+        <div class="text-end">
+            <button type="submit" class="btn btn-primary px-4">Ekle</button>
+        </div>
     </form>
 </main>
 
